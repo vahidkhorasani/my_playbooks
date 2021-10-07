@@ -1,0 +1,107 @@
+---
+- hosts: all
+  tasks:
+  - name: Update OS
+    yum:
+      name: "*"
+      state: latest
+      exclude: kernel*
+    tags:
+      - update
+
+  - name: Install Epel Package
+    yum:
+      name: "epel-release.noarch"
+      state: installed
+    tags:
+      - epel
+
+  - name: Stop firewalld
+    service:
+      name: firewalld
+      state: stopped
+      enabled: no
+    tags:
+      - firewalld
+
+  - name: disable selinux
+    selinux:
+      state: disabled      
+    tags:
+      - selinx
+
+  - name: copy public keys
+    template:
+      src:  files/authorized_keys.j2
+      dest: /root/.ssh/authorized_keys
+      mode: 0600
+    tags:
+      - key
+
+  - name: Add or modify nofile soft limit for the users
+    pam_limits:
+      domain: '*'
+      limit_type: soft
+      limit_item: nofile
+      value: 64000
+    tags:
+      - pam
+
+  - name: Add or modify nofile hard limit for the users
+    pam_limits:
+      domain: '*'
+      limit_type: hard
+      limit_item: nofile
+      value: 64000
+    tags:
+      - pam
+
+  - name: Install Common Packages
+    yum:
+      name: "{{packages}}"
+      state: installed
+    vars:
+      packages:
+        - atop
+        - iptraf
+        - iotop
+        - screen
+        - arping
+        - ethtool
+        - lsof
+        - ntpdate
+        - mlocate
+        - dlocate
+        - dnsutils
+        - rcconf
+        - build-essential
+        - gdisk
+        - ifenslave-2.6
+        - tree
+        - links
+        - curl
+        - xfsprogs
+        - less
+        - rsync
+        - whois
+        - iptables-persistent
+        - vim
+        - nmap-ncat
+        - tcpdump
+        - tcptraceroute
+        - net-tools
+        - traceroute
+        - telnet
+        - unzip
+        - firewalld
+        - lvm2
+        - sysstat
+        - htop
+        - mtr
+        - bzip2
+        - atop
+        - iftop
+        - ncdu
+        - bash-completion
+    tags:
+      - packages

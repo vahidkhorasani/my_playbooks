@@ -1,0 +1,28 @@
+---
+- hosts: all
+  tasks:
+    - name: make sure ntp package is installed
+      package:
+        name: ntp
+        state: present
+    - name: copy ntp config to server
+      template:
+        src: files/ntp.conf.j2
+        dest: /etc/ntp.conf
+      vars:
+        ntp_server_ip: your ntp server goes here
+
+    - name: restart ntp service
+      service:
+        name: ntpd
+        state: restarted
+        enabled: yes
+
+    - name: set ntp for timedatectl
+      command: timedatectl set-ntp true
+
+    - name: restart ntp service
+      service:
+        name: ntpd
+        state: restarted
+        enabled: yes

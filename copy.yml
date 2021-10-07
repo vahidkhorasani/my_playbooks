@@ -1,0 +1,18 @@
+---
+- hosts: all
+  vars:
+    files:
+
+  - name: copy one file
+    copy:
+        src:  your source file
+        dest: dest path on server
+        backup: yes
+
+  - name: copy multiple files
+    copy:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      backup: yes
+    with_items:
+      - "{{ files }}"

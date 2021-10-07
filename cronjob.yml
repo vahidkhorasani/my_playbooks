@@ -1,0 +1,34 @@
+---
+- hosts: all
+  tasks:
+    - name: Create scripts directory if not exist
+      file: 
+        path: /opt/scripts
+        state: directory 
+        owner: root
+        mode: '0700' 
+
+    - name: Create db_check directory if not exist
+      file: 
+        path: /opt/scripts/db_check
+        state: directory 
+        owner: root
+        mode: '0700' 
+
+    - name: Copy db_check script to /opt/scripts/db_check
+      copy:
+        src: "files/db_check.sh"
+        dest: "/opt/scripts/db_check/"
+        owner: root
+        group: root
+        mode: 0755
+      
+    - name: Ensure Database liveness check is run every minute
+      ansible.builtin.cron:
+        name: "Check Database liveness"
+        minute: "*"
+        hour: "*"
+        day: "*"
+        month: "*"
+        weekday: "*"
+        job: "bash /opt/scripts/db_check/db_check.sh"

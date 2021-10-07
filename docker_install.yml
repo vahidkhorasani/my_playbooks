@@ -1,0 +1,107 @@
+---
+- hosts: all
+  tasks:
+    - name: Remove Older Version Of Docker
+      yum:
+        name: "{{ packages }}"
+        state: absent
+      vars:
+        packages:
+        - docker
+        - docker-client
+        - docker-client-latest
+        - docker-common
+        - docker-latest
+        - docker-latest-logrotate
+        - docker-logrotate
+        - docker-engine
+
+    - name: Update OS
+      yum:
+        name: "*"
+        state: latest
+        exclude: kernel*
+      tags:
+        - upgrade
+    
+    - name: Install Docker Requirements
+      yum:
+        name: "{{packages}}"
+        state: installed
+      vars:
+        packages:
+        - yum-utils
+        - device-mapper-persistent-data
+        - lvm2
+      tags:
+        - requirements
+
+    - name: Add shecan DNS to resolv.conf
+      copy:
+        src: files/shecan.conf
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
+      tags:
+        - dns
+
+    - name: Add Docker repository
+      copy:
+        src: files/docker-repository.conf
+        dest: /etc/yum.repos.d/docker-ce.repo
+        owner: root
+        group: root
+        mode: '0644'
+      tags:
+        - repo
+   
+    - name: Install Docker-ce
+      yum:
+        name: "{{packages}}"
+        state: installed
+      vars:
+        packages:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+      tags:
+        - docker
+
+    - name: Create /etc/docker directory for daemon.json
+      file: 
+        path: /etc/docker
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      tags:
+        - directory
+   
+    - name: Add yout custom Registry to daemon.json
+      copy:
+        src: files/daemon.json
+        dest: /etc/docker/daemon.json
+      tags:
+        - daemon
+
+    - name: Start Docker Service
+      service:
+        name: docker
+        state: started
+      
+    - name: Restart Docker Service
+      service:
+        name: docker
+        state: restarted
+      
+    - name: Pull hello-world to check docker installed successfully
+      shell: docker pull hello-world
+      tags:
+        - check
+
+    - name: Restart Network to set default DNS Servers
+      service:
+        name: network
+        state: restarted
