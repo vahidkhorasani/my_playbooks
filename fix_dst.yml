@@ -1,0 +1,105 @@
+---
+# This Playbook updates tzdata to disable DST on Asia/Tehran timezone
+- hosts: HOSTS
+  gather_facts: no
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Check tzdb version
+      shell: awk '/version/ {print $NF}' /usr/share/zoneinfo/tzdata.zi 
+      register: tzdb_version_1
+      tags: check
+
+    - name: Print tzdb version
+      debug:
+        msg: "{{tzdb_version_1.stdout}}"
+      tags: check
+
+    - name: Check zdump version
+      shell: zdump -v /etc/localtime | grep '202[2-3]'
+      register: zdump_version_1
+      tags: check
+
+    - name: Print zdump version
+      debug:
+        msg: "{{zdump_version_1.stdout_lines}}"
+      tags: check
+
+    - name: Creates tmp zoneinfo directory zoneinfo for Backup & Extract
+      file:
+        path: /var/tmp/zoneinfo/src
+        state: directory
+        owner: root
+        group: root
+        mode: 0775
+        recurse: yes
+      tags: mkdir
+
+    - name: Take a Backup from current zoneinfo 
+      community.general.archive:
+        path: /usr/share/zoneinfo
+        dest: /var/tmp/zoneinfo/currentZoneinfoFilesBackup.tar.gz
+        format: gz
+        force_archive: true
+      tags: backup
+
+    - name: Download tzdata2022g & check (sha256)
+      ansible.builtin.get_url:
+        url: https://data.iana.org/time-zones/releases/tzdata2022g.tar.gz
+        dest: /var/tmp/zoneinfo/src/tzdata2022g.tar.gz
+        mode: "0664"
+        checksum: sha256:4491db8281ae94a84d939e427bdd83dc389f26764d27d9a5c52d782c16764478
+      tags: download
+
+    - name: Extract tzdata2022g
+      unarchive:
+        src: /var/tmp/zoneinfo/src/tzdata2022g.tar.gz
+        dest: /var/tmp/zoneinfo/src/
+        remote_src: yes
+      tags: extract
+
+    - name: Check that asia file exists after extraction
+      stat:
+       path: /var/tmp/zoneinfo/src/asia
+      register: asia_result
+
+    - name: Compile Asia
+      shell: zic /var/tmp/zoneinfo/src/asia
+      when: asia_result.stat.exists
+      register: zic_asia
+      tags: compile
+
+    - name: Compile Asia/Tehran
+      shell: zic -l Asia/Tehran
+      when: zic_asia is changed
+      tags: compile
+
+    - name: Check /etc/localtime file modify time
+      shell: ls -lh /etc/localtime
+      register: localtime_status
+      tags: check
+
+    - name: Print /etc/localtime stat
+      debug:
+        msg: "{{localtime_status.stdout_lines}}"
+      tags: check
+
+    - name: Check tzdb version after compile
+      shell: awk '/version/ {print $NF}' /usr/share/zoneinfo/tzdata.zi 
+      register: tzdb_version_2
+      tags: check
+
+    - name: Print tzdb version after compile
+      debug:
+        msg: "{{tzdb_version_2.stdout}}"
+      tags: check
+
+    - name: Check zdump version after version
+      shell: zdump -v /etc/localtime | grep '202[2-3]'
+      register: zdump_version_2
+      tags: check
+
+    - name: Print zdump version after version
+      debug:
+        msg: "{{zdump_version_2.stdout_lines}}"
+      tags: check
