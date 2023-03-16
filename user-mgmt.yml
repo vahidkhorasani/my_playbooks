@@ -9,9 +9,8 @@
       update_password: always
       password: "{{password}}"
     with_items:
-      - 
-      - 
-      - 
+      - user1
+      - user2
     vars:
       password: 
     tags:

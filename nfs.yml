@@ -1,0 +1,55 @@
+---
+- hosts: all
+  tasks:
+
+  - name: Update the repository
+    yum:
+      name: '*'
+      state: latest
+
+  - name: "Install NFS Server"
+    yum:
+      name: nfs-utils
+      state: present
+
+  - name: "Create NFS Share directroy"
+    file:
+     path: /var/nfsshare
+     state: directory
+     mode: 0755
+     group: nfsnobody
+     owner: nfsnobody
+
+  - name: "Make sure a NFS Services are started"
+    systemd:
+      name: "{{ item }}"
+      state: started
+    with_items:
+      - 'rpcbind'
+      - 'nfs-server'
+      - 'nfs-lock'
+      - 'nfs-idmap'
+
+  - name: "Make Sure NFS services are enabled"
+    systemd:
+      name: "{{ item }}"
+      enabled: yes
+    with_items:
+      - 'rpcbind'
+      - 'nfs-server'
+      - 'nfs-lock'
+      - 'nfs-idmap'
+
+  - name: "Add NFS services to Firewall"
+    firewalld:
+      service: "{{ item }}"
+      permanent: yes
+      state: enabled
+      zone: public
+    with_items:
+      - nfs
+      - mountd
+      - rpc-bind
+
+  - name: "Reload Firewalld to apply firewall rules"
+    command: firewall-cmd --reload

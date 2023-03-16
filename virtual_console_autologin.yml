@@ -1,0 +1,47 @@
+---
+- hosts: all
+  tasks:
+    - name: Check if getty@tty1.service.d directory exists
+      stat:
+        path: /etc/systemd/system/getty@tty1.service.d
+      register: my_folder
+ 
+    - name: Make /etc/systemd/system/getty@tty1.service.d Directory if does not exist
+      file:
+        path: /etc/systemd/system/getty@tty1.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      when: my_folder.stat.exists == false
+
+    - name: Check if override config file exists
+      stat:
+        path: /etc/systemd/system/getty@tty1.service.d/override.conf
+      register: my_file
+ 
+    - name: Make /etc/systemd/system/getty@tty1.service.d/override.conf file if does not exist
+      file:
+        path: /etc/systemd/system/getty@tty1.service.d/override.conf
+        state: touch
+        owner: root
+        group: root
+        mode: '0644'
+      when: my_file.stat.exists == false
+
+    - name: Add virtual console root autologin content to /etc/systemd/system/getty@tty1.service.d/override.conf
+      blockinfile:
+        path: /etc/systemd/system/getty@tty1.service.d/override.conf
+        block: |
+          [Service]
+          ExecStart=
+          ExecStart=-/usr/sbin/agetty --autologin root --noclear %I $TERM
+
+    - name: just force systemd to reread configs
+      systemd:
+        daemon_reload: yes
+
+    - name: Restart getty@tty1 service
+      systemd:
+        state: restarted
+        name: getty@tty1
